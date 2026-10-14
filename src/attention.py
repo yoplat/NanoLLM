@@ -58,7 +58,7 @@ class MultiHeadSelfAttention(nn.Module):
         ctx = torch.matmul(w, v)  # (B, n_heads, T, d_head)
         out = ctx.transpose(1, 2).reshape(B, T, C)  # (B, T, d_model)
         out = self.proj(out)
-        return out, w
+        return out
 
 
 def causal_mask(T: int, device=None):
