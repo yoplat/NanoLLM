@@ -27,7 +27,6 @@ class MultiHeadSelfAttention(nn.Module):
         self.n_head = n_head
         self.d_head = d_model // n_head
         self.qkv = nn.Linear(d_model, 3 * d_model, bias=False)
-        # Position-wise FFN (runs for each token independently)
         self.proj = nn.Linear(d_model, d_model, bias=False)
         self.dropout = nn.Dropout(dropout)
 
@@ -45,23 +44,24 @@ class MultiHeadSelfAttention(nn.Module):
         scale = 1.0 / sqrt(self.d_head)
 
         # Attention(Q, K, V) = softmax(Q*K^T / sqrt(d_head)) * V
+        # F.scaled_dot_product_attendion(q, k, v, is_causal=True, dropout_p=)
         # each row (last 2 dim) will be the attention weight for particular query
         attn = (
-            torch.matmul(q, k.transpose[-2, -1]) * scale
+            torch.matmul(q, k.transpose(-2, -1)) * scale
         )  # (B, n_heads, T, T)
-        mask = casual_mask(T, device=x.device)
-        attn = attention.masked_fill(mask, float("-inf"))
+        mask = causal_mask(T, device=x.device)
+        attn = attn.masked_fill(mask, float("-inf"))
         # Softmax of (-inf) is 0
         w = F.softmax(attn, dim=-1)  # per query
         w = self.dropout(w)
 
         ctx = torch.matmul(w, v)  # (B, n_heads, T, d_head)
-        out = ctx.transpose(1, 2).contiguous().view(B, T, C)  # (B, T, d_model)
+        out = ctx.transpose(1, 2).reshape(B, T, C)  # (B, T, d_model)
         out = self.proj(out)
         return out, w
 
 
-def casual_mask(T: int, device=None):
+def causal_mask(T: int, device=None):
     """Returns bool mask for attention mechanism (True if masked).
     Shape: (1, 1, T, T) suitable for beign broadcasted with (B, heads, T, T)
     """
