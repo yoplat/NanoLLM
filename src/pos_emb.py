@@ -1,3 +1,4 @@
+import math
 import torch
 import torch.nn as nn
 
@@ -51,3 +52,43 @@ class SinusoidalPositionalEncoding(nn.Module):
     def forward(self, x: torch.Tensor):
         _, T, _ = x.shape
         return x + self.pe[:T].unsqueeze(0)
+
+
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+
+    max_len, d_model = 256, 64
+    pe = SinusoidalPositionalEncoding(
+        max_len, d_model
+    ).pe.numpy()  # (max_len, d_model)
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8), height_ratios=[3, 2])
+
+    # rows = embedding dims, columns = positions
+    im = ax1.imshow(
+        pe.T,
+        aspect="auto",
+        cmap="RdBu_r",
+        vmin=-1,
+        vmax=1,
+        origin="upper",
+        interpolation="nearest",
+    )
+    ax1.set(
+        xlabel="position", ylabel="embedding dim", title="Sinusoidal PE matrix"
+    )
+    fig.colorbar(im, ax=ax1)
+
+    # a few pairs: sin in slot 2i (solid), cos in slot 2i+1 (dashed)
+    for i in [0, 4, 10, d_model // 2 - 1]:
+        (line,) = ax2.plot(pe[:, 2 * i], label=f"pair i={i}")
+        ax2.plot(pe[:, 2 * i + 1], "--", color=line.get_color(), alpha=0.6)
+    ax2.set(
+        xlabel="position",
+        ylabel="value",
+        title="Sample pairs (sin solid, cos dashed)",
+    )
+    ax2.legend(loc="upper right")
+
+    plt.tight_layout()
+    plt.show()
